@@ -3,7 +3,9 @@ import {ethers} from "ethers";
 import {abi, contractAddress} from "./consts.js";
 
 const connectBtn = document.querySelector('#connect');
+const balanceBtn = document.querySelector('#balance');
 const fundBtn = document.querySelector('#fund');
+const withdrawBtn = document.querySelector('#withdraw');
 
 if (typeof window.ethereum === "undefined") {
     console.error('Please install Metamask')
@@ -18,6 +20,24 @@ const connectMetamask = async () => {
     });
 }
 
+const getBalance = async () => {
+    //---------VERSION 1
+
+    // const provider = new ethers.providers.Web3Provider(window.ethereum);
+    // const signer = provider.getSigner();
+    // const contract = new ethers.Contract(contractAddress, abi, signer);
+    //
+    // const txResponse = await contract.getAmountFunded(signer.getAddress());
+    // console.log(ethers.utils.formatEther(txResponse));
+
+    //-------VERSION 2
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const result = await provider.getBalance(contractAddress);
+
+    console.log(ethers.utils.formatEther(result));
+}
+
 const fund = async (ethAmount = '0.1') => {
     // to call fund function we need these thing
     // provider / connection to the blockchain
@@ -29,15 +49,26 @@ const fund = async (ethAmount = '0.1') => {
     const signer = provider.getSigner();
     const contract = new ethers.Contract(contractAddress, abi, signer);
 
-    const ethValue = ethers.utils.parseEther(ethAmount);
+    const ethValue = ethers.utils.parseEther(ethAmount)
 
-    const txResponse = await contract.fund({ value: ethValue});
+    const txResponse = await contract.fund({ value: ethValue });
 
-    await listForTxMine(txResponse, provider);
-    console.log('Done');
+    await waitForTxMine(txResponse, provider);
+    console.log('Fund Done');
 }
 
-const listForTxMine = async (txResponse, provider) => {
+const withdraw = async () => {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const contract = new ethers.Contract(contractAddress, abi, signer);
+
+    const txResponse = await contract.withdraw();
+
+    await waitForTxMine(txResponse, provider);
+    console.log('Withdraw Done');
+}
+
+const waitForTxMine = async (txResponse, provider) => {
     console.log(`Mining ${txResponse.hash}`);
 
     return new Promise((resolve) => {
@@ -61,13 +92,29 @@ connectBtn.addEventListener('click', async function (e) {
     }
 })
 
-fundBtn.addEventListener('click', async function (e) {
+balanceBtn.addEventListener('click', async function(e) {
     e.preventDefault();
 
+    await getBalance();
+});
+
+fundBtn.addEventListener('click', async function (e) {
+    e.preventDefault();
+    const ethValue = document.querySelector('#ethAmount').value;
+
     try {
-        await fund();
+        await fund(ethValue);
     } catch (e) {
         console.error(e);
     }
 })
 
+withdrawBtn.addEventListener('click', async function (e) {
+    e.preventDefault();
+    console.log('withdraw click');
+    try {
+        await withdraw();
+    } catch (e) {
+        console.error(e);
+    }
+})
